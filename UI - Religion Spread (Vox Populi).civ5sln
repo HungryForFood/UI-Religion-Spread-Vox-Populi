@@ -1,0 +1,23 @@
+
+Microsoft Visual Studio Solution File, Format Version 11.00
+# ModBuddy Solution File, Format Version 11.00
+Project("{154be006-dec4-40e4-a8fb-ffc274db6e53}") = "UI - Religion Spread (Vox Populi)", "UI - Religion Spread (Vox Populi)\UI - Religion Spread (Vox Populi).civ5proj", "{0090873c-c75a-41a2-83a4-44c3a17c025b}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Default|x86 = Default|x86
+		Deploy Only|x86 = Deploy Only|x86
+		Package Only|x86 = Package Only|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0090873c-c75a-41a2-83a4-44c3a17c025b}.Default|x86.ActiveCfg = Default|x86
+		{0090873c-c75a-41a2-83a4-44c3a17c025b}.Default|x86.Build.0 = Default|x86
+		{0090873c-c75a-41a2-83a4-44c3a17c025b}.Deploy Only|x86.ActiveCfg = Deploy Only|x86
+		{0090873c-c75a-41a2-83a4-44c3a17c025b}.Deploy Only|x86.Build.0 = Deploy Only|x86
+		{0090873c-c75a-41a2-83a4-44c3a17c025b}.Package Only|x86.ActiveCfg = Package Only|x86
+		{0090873c-c75a-41a2-83a4-44c3a17c025b}.Package Only|x86.Build.0 = Package Only|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
