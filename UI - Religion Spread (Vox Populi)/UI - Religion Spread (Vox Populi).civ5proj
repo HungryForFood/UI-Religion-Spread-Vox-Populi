@@ -5,7 +5,7 @@
     <ProjectGuid>{0090873c-c75a-41a2-83a4-44c3a17c025b}</ProjectGuid>
     <Name>UI - Religion Spread (Vox Populi)</Name>
     <Guid>ba4d7977-e47e-4145-8577-bd562b0173a3</Guid>
-    <ModVersion>1</ModVersion>
+    <ModVersion>2</ModVersion>
     <Stability>Stable</Stability>
     <Teaser>Displays spread of religions on a map</Teaser>
     <Description>Adds a Map tab to the Religion Overview popup that displays the spread of world religions. Also adds the number of followers to the World Religions tab.[NEWLINE][NEWLINE]Vox Populi compatible by Infixo, UndeadDevel, and HungryForFood. Version 1.2.</Description>

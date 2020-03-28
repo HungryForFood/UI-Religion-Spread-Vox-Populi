@@ -114,13 +114,13 @@ local g_WorldReligionsManager = InstanceManager:new( "WorldReligionInstance", "B
 local g_BeliefsManager = InstanceManager:new( "BeliefInstance", "Base", Controls.BeliefsStack);
 
 -- Infixo: Religion Spread - definitions and variables
-local Colours = {
-  UNKNOWN   = {r=190, g=190, b=190, a=1.0},
-  NONE      = {r=0,   g=0,   b=0,   a=0.0},
-  WATER     = {r=0,   g=0,   b=0,   a=0.0},
-  ICE       = {r=189, g=242, b=255, a=0.7},
-  CITY      = {r=0,   g=0,   b=0,   a=1.0},
-  HOLY_CITY = {r=255, g=255, b=0,   a=1.0}
+local tColours = {
+	UNKNOWN		= {r=190, g=190, b=190, a=1.0},
+	NONE		= {r=0,   g=0,   b=0,   a=0.0},
+	WATER		= {r=0,   g=0,   b=0,   a=0.0},
+	ICE			= {r=189, g=242, b=255, a=0.7},
+	CITY		= {r=0,   g=0,   b=0,   a=1.0},
+	HOLY_CITY	= {r=255, g=255, b=0,   a=1.0}
 }
 
 local iFeatureIce = GameInfoTypes.FEATURE_ICE
@@ -476,21 +476,6 @@ end
 
 g_Tabs["YourReligion"].RefreshContent = RefreshYourReligion;
 
--- Infixo: Religion Spread - number of followers - walk through alive players and their cities
-function GetNumFollowers(eReligion)
-  local iFollowers = 0
-  
-	for iPlayer = 0, GameDefines.MAX_CIV_PLAYERS - 1 do	
-		local pPlayer = Players[iPlayer];
-    if (pPlayer:IsAlive()) then
-      for pCity in pPlayer:Cities() do
-        iFollowers = iFollowers + pCity:GetNumFollowers(eReligion)			
-      end
-    end
-  end
-  
-  return iFollowers
-end
 -- Infixo: Religion Spread
 
 function RefreshWorldReligions()
@@ -500,6 +485,8 @@ function RefreshWorldReligions()
 	
 	local activePlayer = Players[Game.GetActivePlayer()];
 	local activeTeam = Teams[activePlayer:GetTeam()];
+	
+	AssignReligionColours();
 		
 	-- Pantheon and Religion info (JFD: Changes made to register religions 'founded' by the same player)
 	for religion in GameInfo.Religions() do
@@ -512,42 +499,41 @@ function RefreshWorldReligions()
 			local holyCityName = holyCity:GetName();
 			--print("Holy City is", holyCityName);
 			local civName = pPlayer:GetCivilizationDescription();
-			
+			--print("Holy City owned by", civName)
 			local founderID = pPlayer:GetID();
+			--print("Who has ID:", founderID)
+			-- Infixo: Religion Spread - add colors to religion names
+			-- HungryForFood: Always refresh the colour, since the holy city can change hands
+			local tColour = tColours[eReligion]
+			-- Infixo: Religion Spread end
 			
+			local bMet = true
+
 			if(not activeTeam:IsHasMet(pPlayer:GetTeam())) then
 				founderID = -1;
 				holyCityName = "TXT_KEY_RO_WR_UNKNOWN_HOLY_CITY";
 				civName = "TXT_KEY_RO_WR_UNKNOWN_CIV";
+				bMet = false
 			end
-		-- Infixo: Religion Spread - add colors to religion names
-        local colour = Colours[eReligion];
-          if (colour == nil) then
-		    --print("colour is nil - calling AssignReligionColours()");
-            AssignReligionColours();
-            colour = Colours[eReligion];
-			--if (colour == nil) then print("colour is still nil after ARC()"); end
-		  else
-		    --print("colour is not nil");
-          end
-		-- Infixo: Religion Spread
-			
+
+			--print("Inserting into religions table for religion ID:", eReligion)
 			table.insert(religions, {
 				Name = Locale.Lookup(Game.GetReligionName(eReligion)),
 				ReligionIconIndex = religion.PortraitIndex,
 				ReligionIconAtlas = religion.IconAtlas,
 				FounderID = founderID,
-				HolyCity= Locale.Lookup(holyCityName),
+				HolyCity = Locale.Lookup(holyCityName),
 				Founder = Locale.Lookup(civName),
 				NumCities = Game.GetNumCitiesFollowing(eReligion),
 				-- Infixo: Religion Spread - additional info on tab with all religions
-				Color = {x=colour.r/255, y=colour.g/255, z=colour.b/255, w=colour.a},
-				NumFollowers = GetNumFollowers(eReligion),
+				Colour = {x=tColour.r/255, y=tColour.g/255, z=tColour.b/255, w=tColour.a},
+				NumFollowers = Game.GetNumFollowers(eReligion),
 				FounderAlive = pPlayer:IsAlive(),
 				-- Infixo: Religion Spread
+				Met = bMet
 			});
 			--print("#cities    is", Game.GetNumCitiesFollowing(eReligion));
-			--print("#followers is", GetNumFollowers(eReligion));
+			--print("#followers is", Game.GetNumFollowers(eReligion));
 			--print("#religions is", #religions);
 		else
 			--print("No Holy City found");
@@ -597,7 +583,9 @@ function RefreshWorldReligions()
 			local entry = g_WorldReligionsManager:GetInstance();
 			entry.ReligionName:SetText(v.Name);
 			-- Infixo: Religion Spread
-			entry.ReligionName:SetColor(v.Color, 0);
+			if v.Met then -- since the colour is based on the holy city owner's civ colours, try not to reveal it too early
+				entry.ReligionName:SetColor(v.Colour, 0);
+			end
 			-- Infixo: Religion Spread
 			entry.HolyCityName:SetText(v.HolyCity);
 			entry.Founder:SetText(v.Founder);
@@ -743,19 +731,53 @@ function AssignReligionColours()
 	-- Infixo: 2017.01.30 the function has been redesigned; original was awfully complicated
 	-- colors are always the same for religions, they are stored in DB
 	-- simply iterate through all religions and get them
+	-- HungryForFood: 2020.03.27 (yes, free time due to COVID-19)
+	-- Previously, each religion had a hard-coded colour. However, this made the mod
+	-- incompatible with mods which add more religion types. Hence, we shall just use the
+	-- holy city own civ colours.
 	--print("function AssignReligionColours() - new version");
 	for religion in GameInfo.Religions() do
-		-- print("Religion ID", religion.ID, "is", religion.Type);
-		local colorMap = GameInfo.Religion_MapColors("ReligionType='" .. religion.Type .. "'")();
-        color = GameInfo.Colors[colorMap.ColorType];
-		-- print("Color type", colorMap.ColorType, "is RGB", color.Red, color.Green, color.Blue);
-        Colours[religion.ID] = {r=(255*color.Red), g=(255*color.Green), b=(255*color.Blue), a=color.Alpha};
+		local eReligion = religion.ID
+		--print("Checking religion, ID:", eReligion, "Type:", religion.Type)
+		local pHolyCity = nil
+		local tColour, tColourPrimary, tColourSecondary = {}, {}, {}
+		-- exception for pantheon
+		if religion.Type == "RELIGION_PANTHEON" then
+			tColour = GameInfo.Colors["COLOR_PLAYER_GRAY"]
+			--print("Found the pantheon religion.")
+		elseif Game.AnyoneHasReligion(eReligion) then
+			pHolyCity = Game.GetHolyCityForReligion(eReligion, -1)
+			if pHolyCity then -- either religion type was not founded, or holy city has been razed
+				--print("Found holy city.")
+				local pPlayer = Players[pHolyCity:GetOwner()]
+				if pPlayer then
+					--print("Holy city owner: Player", pHolyCity:GetOwner())
+				end
+				--print("Attempting to get player colours for player,")
+				local ePlayerColour = pPlayer:GetPlayerColor()
+				--print("Player colour ID is:", ePlayerColour)
+				tColourPrimary = GameInfo.Colors[GameInfo.PlayerColors[pPlayer:GetPlayerColor()].PrimaryColor]
+				tColourSecondary = GameInfo.Colors[GameInfo.PlayerColors[pPlayer:GetPlayerColor()].SecondaryColor]
+				
+				-- pick the brighter colour from the two
+				if tColourPrimary.Red + tColourPrimary.Green + tColourPrimary.Blue > tColourSecondary.Red + tColourSecondary.Green + tColourSecondary.Blue then
+					tColour = tColourPrimary
+				else
+					tColour = tColourSecondary
+				end
+				
+				--print("Success.")
+			end
+
+			if tColour == {} then
+				tColour = GameInfo.Colors["COLOR_PLAYER_GRAY"]
+				--print("Either holy city not found, or civ did not have a colour assigned in database; assigning grey.")
+			end
+			
+			--print("Saving colour to table.")
+			tColours[eReligion] = {r = tColour.Red * 255, g = tColour.Green * 255, b = tColour.Blue * 255, a = 1};
+		end
 	end
---	print("Printing few colors (insanity check)");
---	print("Color ID= 0 is RGBA=", Colours[0].r, Colours[0].g, Colours[0].b, Colours[0].a);
---	print("Color ID= 1 is RGBA=", Colours[1].r, Colours[1].g, Colours[1].b, Colours[1].a);
---	print("Color ID=13 is RGBA=", Colours[13].r, Colours[13].g, Colours[13].b, Colours[13].a);
---	print("end of function AssignReligionColours()");
 end
 
 function ShadeCities(iTeam)
@@ -767,11 +789,11 @@ function ShadeCities(iTeam)
         local iReligion = pCity:GetReligiousMajority()
 
         if (iReligion > 0) then
-          if (Colours[iReligion] == nil) then
+          if (tColours[iReligion] == nil) then
             AssignReligionColours()
           end
 
-          ShadeCity(iTeam, pCity, Colours[iReligion])
+          ShadeCity(iTeam, pCity, tColours[iReligion])
         end
       end
     end
@@ -802,7 +824,7 @@ function RefreshMap()
   for y = 0, mapHeight-1, 1 do  
     for x = 0, mapWidth-1, 1 do
       local pPlot = Map.GetPlot(x, y)
-      local colour = Colours.UNKNOWN
+      local colour = tColours.UNKNOWN
 
       if (pPlot:IsRevealed(iTeam)) then
         if (pPlot:IsCity()) then
@@ -810,17 +832,17 @@ function RefreshMap()
           local iReligion = pCity:GetReligiousMajority()
 
           if (iReligion >= 0 and pCity:IsHolyCityForReligion(iReligion)) then
-            colour = Colours.HOLY_CITY
+            colour = tColours.HOLY_CITY
           else
-            colour = Colours.CITY
+            colour = tColours.CITY
           end
         else
           if (pPlot:GetFeatureType() == iFeatureIce) then
-            colour = Colours.ICE
+            colour = tColours.ICE
           elseif (pPlot:IsWater()) then
-            colour = Colours.WATER
+            colour = tColours.WATER
           else
-            colour = Colours.NONE
+            colour = tColours.NONE
           end
         end
       end
